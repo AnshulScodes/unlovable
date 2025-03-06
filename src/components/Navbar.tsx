@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { PaintBrush, Github, Sun, Moon } from 'lucide-react';
+import { Paintbrush, Github, Sun, Moon } from 'lucide-react';
 
 interface NavbarProps {
   isDarkMode: boolean;
@@ -13,7 +13,7 @@ const Navbar: React.FC<NavbarProps> = ({ isDarkMode, toggleDarkMode }) => {
     <header className="w-full border-b border-border bg-background/95 backdrop-blur-sm fixed top-0 z-50">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
-          <PaintBrush className="h-5 w-5 text-primary" />
+          <Paintbrush className="h-5 w-5 text-primary" />
           <span className="font-bold text-lg">Theme Studio</span>
         </div>
         

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { PaintBrush, Moon, Sun, Sliders, Code, Sparkles, EyeIcon } from "lucide-react";
+import { Paintbrush, Moon, Sun, Sliders, Code, Sparkles, EyeIcon } from "lucide-react";
 import ColorPicker from './ColorPicker';
 import AIPromptInput from './AIPromptInput';
 import { useThemeCustomizer } from '@/hooks/useThemeCustomizer';
