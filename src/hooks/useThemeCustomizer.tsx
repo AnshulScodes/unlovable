@@ -1,6 +1,6 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from "sonner";
+import { generateUniqueComponent, fetchDesignInspirations } from '@/services/designGenerationService';
 
 export type ThemeColor = {
   name: string;
@@ -27,6 +27,14 @@ export type ThemeSuggestion = {
   description: string;
   preview: string;
   applied: boolean;
+};
+
+export type GeneratedComponent = {
+  name: string;
+  description: string;
+  code: string;
+  styleCode: string;
+  preview: React.ReactNode;
 };
 
 const defaultThemeVariables: ThemeVariables = {
@@ -56,62 +64,144 @@ const defaultThemeVariables: ThemeVariables = {
   shadowSize: 2,
 };
 
-// Presets: Pre-defined theme configurations
+// Enhanced unique presets with different design aesthetics
 const themePresets = {
   default: { ...defaultThemeVariables },
-  minimal: {
+  
+  neobrutalist: {
     ...defaultThemeVariables,
-    borderRadius: 0.25,
+    borderRadius: 0,
     colors: defaultThemeVariables.colors.map(color => {
       if (color.variable === '--primary') {
-        return { ...color, hue: 220, saturation: 30, lightness: 50, value: 'hsl(220, 30%, 50%)' };
+        return { ...color, hue: 0, saturation: 100, lightness: 50, value: 'hsl(0, 100%, 50%)' }; // Bright red
+      } else if (color.variable === '--secondary') {
+        return { ...color, hue: 0, saturation: 0, lightness: 95, value: 'hsl(0, 0%, 95%)' }; // Light gray
+      } else if (color.variable === '--border') {
+        return { ...color, hue: 0, saturation: 0, lightness: 0, value: 'hsl(0, 0%, 0%)' }; // Black
       }
       return color;
     }),
-    shadowSize: 1,
+    fontWeight: 800,
+    shadowSize: 0,
   },
-  colorful: {
+  
+  glassmorphic: {
     ...defaultThemeVariables,
-    borderRadius: 1.25,
+    borderRadius: 1.5,
     colors: defaultThemeVariables.colors.map(color => {
-      if (color.variable === '--primary') {
-        return { ...color, hue: 280, saturation: 80, lightness: 55, value: 'hsl(280, 80%, 55%)' };
-      } else if (color.variable === '--accent') {
-        return { ...color, hue: 340, saturation: 75, lightness: 60, value: 'hsl(340, 75%, 60%)' };
+      if (color.variable === '--background') {
+        return { ...color, hue: 210, saturation: 30, lightness: 95, value: 'hsl(210, 30%, 95%)' };
+      } else if (color.variable === '--primary') {
+        return { ...color, hue: 200, saturation: 80, lightness: 65, value: 'hsl(200, 80%, 65%)' };
+      } else if (color.variable === '--secondary') {
+        return { ...color, hue: 180, saturation: 50, lightness: 80, value: 'hsl(180, 50%, 80%)' };
+      } else if (color.variable === '--border') {
+        return { ...color, hue: 210, saturation: 30, lightness: 80, value: 'hsl(210, 30%, 80%)' };
+      }
+      return color;
+    }),
+    shadowSize: 4,
+  },
+  
+  neumorphic: {
+    ...defaultThemeVariables,
+    borderRadius: 1,
+    colors: defaultThemeVariables.colors.map(color => {
+      if (color.variable === '--background') {
+        return { ...color, hue: 210, saturation: 10, lightness: 95, value: 'hsl(210, 10%, 95%)' };
+      } else if (color.variable === '--primary') {
+        return { ...color, hue: 210, saturation: 60, lightness: 60, value: 'hsl(210, 60%, 60%)' };
+      } else if (color.variable === '--secondary') {
+        return { ...color, hue: 210, saturation: 20, lightness: 85, value: 'hsl(210, 20%, 85%)' };
+      } else if (color.variable === '--border') {
+        return { ...color, hue: 210, saturation: 15, lightness: 90, value: 'hsl(210, 15%, 90%)' };
       }
       return color;
     }),
     shadowSize: 3,
   },
-  corporate: {
+  
+  y2k: {
     ...defaultThemeVariables,
-    fontFamily: 'Roboto, sans-serif',
+    borderRadius: 1.25,
+    colors: defaultThemeVariables.colors.map(color => {
+      if (color.variable === '--background') {
+        return { ...color, hue: 280, saturation: 20, lightness: 95, value: 'hsl(280, 20%, 95%)' };
+      } else if (color.variable === '--primary') {
+        return { ...color, hue: 280, saturation: 75, lightness: 65, value: 'hsl(280, 75%, 65%)' };
+      } else if (color.variable === '--secondary') {
+        return { ...color, hue: 200, saturation: 100, lightness: 70, value: 'hsl(200, 100%, 70%)' };
+      } else if (color.variable === '--accent') {
+        return { ...color, hue: 50, saturation: 100, lightness: 70, value: 'hsl(50, 100%, 70%)' };
+      } else if (color.variable === '--border') {
+        return { ...color, hue: 320, saturation: 80, lightness: 70, value: 'hsl(320, 80%, 70%)' };
+      }
+      return color;
+    }),
+    fontFamily: "'Comic Sans MS', cursive",
+    shadowSize: 2,
+  },
+  
+  vaporwave: {
+    ...defaultThemeVariables,
     borderRadius: 0.5,
     colors: defaultThemeVariables.colors.map(color => {
-      if (color.variable === '--primary') {
-        return { ...color, hue: 210, saturation: 70, lightness: 40, value: 'hsl(210, 70%, 40%)' };
-      }
-      return color;
-    }),
-    fontWeight: 500,
-  },
-  playful: {
-    ...defaultThemeVariables,
-    fontFamily: 'Poppins, sans-serif',
-    borderRadius: 1.5,
-    colors: defaultThemeVariables.colors.map(color => {
-      if (color.variable === '--primary') {
-        return { ...color, hue: 340, saturation: 90, lightness: 65, value: 'hsl(340, 90%, 65%)' };
+      if (color.variable === '--background') {
+        return { ...color, hue: 260, saturation: 30, lightness: 90, value: 'hsl(260, 30%, 90%)' };
+      } else if (color.variable === '--primary') {
+        return { ...color, hue: 280, saturation: 70, lightness: 60, value: 'hsl(280, 70%, 60%)' };
       } else if (color.variable === '--secondary') {
-        return { ...color, hue: 180, saturation: 70, lightness: 60, value: 'hsl(180, 70%, 60%)' };
+        return { ...color, hue: 180, saturation: 100, lightness: 75, value: 'hsl(180, 100%, 75%)' };
       } else if (color.variable === '--accent') {
-        return { ...color, hue: 40, saturation: 90, lightness: 65, value: 'hsl(40, 90%, 65%)' };
+        return { ...color, hue: 315, saturation: 90, lightness: 70, value: 'hsl(315, 90%, 70%)' };
       }
       return color;
     }),
-    shadowSize: 4,
-    fontSize: 1.1,
-  }
+    fontFamily: "'VT323', monospace",
+    shadowSize: 2,
+  },
+  
+  cyberpunk: {
+    ...defaultThemeVariables,
+    borderRadius: 0,
+    colors: defaultThemeVariables.colors.map(color => {
+      if (color.variable === '--background') {
+        return { ...color, hue: 240, saturation: 20, lightness: 10, value: 'hsl(240, 20%, 10%)' };
+      } else if (color.variable === '--foreground') {
+        return { ...color, hue: 180, saturation: 100, lightness: 80, value: 'hsl(180, 100%, 80%)' };
+      } else if (color.variable === '--primary') {
+        return { ...color, hue: 180, saturation: 100, lightness: 50, value: 'hsl(180, 100%, 50%)' };
+      } else if (color.variable === '--secondary') {
+        return { ...color, hue: 300, saturation: 100, lightness: 50, value: 'hsl(300, 100%, 50%)' };
+      } else if (color.variable === '--accent') {
+        return { ...color, hue: 60, saturation: 100, lightness: 50, value: 'hsl(60, 100%, 50%)' };
+      }
+      return color;
+    }),
+    fontFamily: "'Orbitron', sans-serif",
+    fontWeight: 500,
+    shadowSize: 3,
+  },
+  
+  claymorphism: {
+    ...defaultThemeVariables,
+    borderRadius: 2,
+    colors: defaultThemeVariables.colors.map(color => {
+      if (color.variable === '--background') {
+        return { ...color, hue: 0, saturation: 0, lightness: 95, value: 'hsl(0, 0%, 95%)' };
+      } else if (color.variable === '--primary') {
+        return { ...color, hue: 350, saturation: 80, lightness: 80, value: 'hsl(350, 80%, 80%)' };
+      } else if (color.variable === '--secondary') {
+        return { ...color, hue: 190, saturation: 70, lightness: 80, value: 'hsl(190, 70%, 80%)' };
+      } else if (color.variable === '--border') {
+        return { ...color, hue: 0, saturation: 0, lightness: 90, value: 'hsl(0, 0%, 90%)' };
+      }
+      return color;
+    }),
+    fontFamily: "'Poppins', sans-serif",
+    fontWeight: 600,
+    shadowSize: 5,
+  },
 };
 
 export const useThemeCustomizer = () => {
@@ -121,6 +211,7 @@ export const useThemeCustomizer = () => {
   const [themeCode, setThemeCode] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  const [generatedComponent, setGeneratedComponent] = useState<GeneratedComponent | null>(null);
   
   const updateColor = useCallback((index: number, property: keyof ThemeColor, value: number | string) => {
     setThemeVariables(prev => {
@@ -193,100 +284,64 @@ export const useThemeCustomizer = () => {
     }
   }, [themeVariables, isDarkMode]);
   
-  const generateFromPrompt = useCallback(async (prompt: string) => {
+  const generateFromPrompt = useCallback(async (prompt: string, inspirations: string[] = [], options: any = {}) => {
     setIsGenerating(true);
-    toast.info("Analyzing your prompt...");
+    toast.info("Analyzing prompt and gathering design inspirations...");
     
-    // Simulate AI processing
-    setTimeout(() => {
-      // Generate a new theme based on the prompt
-      // This is a simplified version; in a real implementation, you'd call an API
-      const newColors = [...themeVariables.colors];
-      let newFontFamily = themeVariables.fontFamily;
-      let newBorderRadius = themeVariables.borderRadius;
-      let newShadowSize = themeVariables.shadowSize;
-      
-      if (prompt.toLowerCase().includes('warm')) {
-        newColors[2] = { ...newColors[2], hue: 25, saturation: 95, lightness: 55, value: 'hsl(25, 95%, 55%)' }; // Primary
-        newColors[4] = { ...newColors[4], hue: 35, saturation: 30, lightness: 96, value: 'hsl(35, 30%, 96%)' }; // Secondary
-      } else if (prompt.toLowerCase().includes('cool')) {
-        newColors[2] = { ...newColors[2], hue: 200, saturation: 98, lightness: 50, value: 'hsl(200, 98%, 50%)' }; // Primary
-        newColors[4] = { ...newColors[4], hue: 210, saturation: 30, lightness: 96, value: 'hsl(210, 30%, 96%)' }; // Secondary
-      } else if (prompt.toLowerCase().includes('tech') || prompt.toLowerCase().includes('modern')) {
-        newColors[2] = { ...newColors[2], hue: 250, saturation: 95, lightness: 60, value: 'hsl(250, 95%, 60%)' }; // Primary
-        newColors[4] = { ...newColors[4], hue: 260, saturation: 20, lightness: 96, value: 'hsl(260, 20%, 96%)' }; // Secondary
-        newFontFamily = 'JetBrains Mono, monospace';
-        newBorderRadius = 0.5;
-      } else if (prompt.toLowerCase().includes('earth') || prompt.toLowerCase().includes('nature')) {
-        newColors[2] = { ...newColors[2], hue: 130, saturation: 65, lightness: 45, value: 'hsl(130, 65%, 45%)' }; // Primary
-        newColors[4] = { ...newColors[4], hue: 100, saturation: 20, lightness: 96, value: 'hsl(100, 20%, 96%)' }; // Secondary
-      } else if (prompt.toLowerCase().includes('luxury') || prompt.toLowerCase().includes('elegant')) {
-        newColors[2] = { ...newColors[2], hue: 45, saturation: 80, lightness: 50, value: 'hsl(45, 80%, 50%)' }; // Gold primary
-        newColors[4] = { ...newColors[4], hue: 0, saturation: 0, lightness: 96, value: 'hsl(0, 0%, 96%)' }; // Soft white secondary
-        newFontFamily = 'Playfair Display, serif';
-        newShadowSize = 3;
-      } else if (prompt.toLowerCase().includes('minimal') || prompt.toLowerCase().includes('clean')) {
-        newColors[2] = { ...newColors[2], hue: 220, saturation: 30, lightness: 50, value: 'hsl(220, 30%, 50%)' }; // Subtle primary
-        newColors[4] = { ...newColors[4], hue: 0, saturation: 0, lightness: 98, value: 'hsl(0, 0%, 98%)' }; // Clean white secondary
-        newBorderRadius = 0.25;
-        newShadowSize = 1;
-      } else if (prompt.toLowerCase().includes('playful') || prompt.toLowerCase().includes('fun')) {
-        newColors[2] = { ...newColors[2], hue: 340, saturation: 90, lightness: 65, value: 'hsl(340, 90%, 65%)' }; // Pink primary
-        newColors[4] = { ...newColors[4], hue: 180, saturation: 70, lightness: 90, value: 'hsl(180, 70%, 90%)' }; // Teal secondary
-        newFontFamily = 'Poppins, sans-serif';
-        newBorderRadius = 1.5;
-        newShadowSize = 4;
+    try {
+      let allInspirations = [...inspirations];
+      if (inspirations.length === 0) {
+        const keywords = prompt.split(' ')
+          .filter(word => word.length > 4)
+          .slice(0, 3);
+        
+        if (keywords.length > 0) {
+          const fetchedInspirations = await fetchDesignInspirations(keywords);
+          allInspirations = [...allInspirations, ...fetchedInspirations];
+        }
       }
       
-      setThemeVariables(prev => ({
-        ...prev,
-        colors: newColors,
-        borderRadius: prompt.toLowerCase().includes('sharp') ? 0.25 : prompt.toLowerCase().includes('round') ? 1.5 : newBorderRadius,
-        fontFamily: newFontFamily,
-        shadowSize: newShadowSize
-      }));
+      const generationOptions = {
+        uniquenessLevel: options.uniquenessLevel || 5,
+        componentType: options.componentType || 'card',
+        designStyle: options.designStyle || '',
+        colorScheme: options.colorScheme || '',
+        ...options
+      };
       
-      // Generate some design suggestions
-      setSuggestions([
-        {
-          id: '1',
-          title: 'Increase contrast',
-          description: 'The primary color could have better contrast with the background for improved accessibility.',
-          preview: 'Adjust lightness of primary color',
-          applied: false
-        },
-        {
-          id: '2',
-          title: 'Complementary accent',
-          description: 'Consider using a complementary color for your accent to create visual interest.',
-          preview: 'Add complementary accent color',
-          applied: false
-        },
-        {
-          id: '3',
-          title: 'Adjust border radius',
-          description: 'The current theme might look better with slightly more rounded corners.',
-          preview: 'Increase border radius to 1rem',
-          applied: false
-        }
-      ]);
+      const result = await generateUniqueComponent(prompt, allInspirations, generationOptions);
+      
+      setThemeVariables(result.themeVariables);
+      
+      setGeneratedComponent({
+        name: 'Generated Component',
+        description: prompt,
+        code: result.componentCode,
+        styleCode: result.styleCode,
+        preview: <div className="component-preview">Component Preview</div>,
+      });
       
       generateThemeCode();
+      
+      setSelectedPreset(null);
+      
+      toast.success("Unique component created successfully!");
+    } catch (error) {
+      console.error("Error generating component:", error);
+      toast.error("Failed to generate component. Please try again.");
+    } finally {
       setIsGenerating(false);
-      setSelectedPreset(null); // Reset preset selection
-      toast.success("Theme generated successfully!");
-    }, 1500);
-  }, [themeVariables]);
+    }
+  }, []);
   
   const applySuggestion = useCallback((id: string) => {
     setSuggestions(prev => prev.map(s => 
       s.id === id ? { ...s, applied: true } : s
     ));
     
-    // Apply the suggestion changes to the theme
     switch (id) {
       case '1': // Increase contrast
-        updateColor(2, 'lightness', 50); // Adjust primary color
+        updateColor(2, 'lightness', 50);
         toast.success("Applied contrast improvement");
         break;
       case '2': // Complementary accent
@@ -381,13 +436,11 @@ module.exports = {
     setThemeCode(code);
   }, [themeVariables]);
   
-  // Apply theme whenever it changes
   useEffect(() => {
     applyThemeToDOM();
     generateThemeCode();
   }, [themeVariables, isDarkMode, applyThemeToDOM, generateThemeCode]);
   
-  // Initialize with default theme
   useEffect(() => {
     applyThemeToDOM();
     generateThemeCode();
@@ -412,5 +465,6 @@ module.exports = {
     applyPreset,
     selectedPreset,
     presets: Object.keys(themePresets),
+    generatedComponent,
   };
 };
