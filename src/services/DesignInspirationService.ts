@@ -1,5 +1,5 @@
-
 import { toast } from 'sonner';
+import { analyzeDesignInspirations as analyzeDesignInspirationsWithAI } from './openAIService';
 
 // In a real implementation, this would integrate with real design API services
 export interface DesignInspiration {
@@ -139,45 +139,69 @@ export const constructEnhancedPrompt = (
   return enhancedPrompt;
 };
 
-// Export a complete workflow function that handles the entire process
+// Generate design from inspirations using AI
 export const generateDesignFromInspirations = async (
-  userPrompt: string,
-  inspirationUrls: string[] = [],
+  prompt: string,
+  inspirations: string[] = [],
   options: any = {}
-) => {
+): Promise<{
+  prompt: string;
+  inspirations: string[];
+  analysis: {
+    colorPalette: string[];
+    layoutStructure: string;
+    typographySystem: string;
+    designPatterns: string[];
+  }
+}> => {
+  console.log('Generating design from inspirations:', { prompt, inspirations, options });
+  
   try {
-    // Step 1: If no inspirations provided, fetch some based on the prompt
-    let allInspirations = [...inspirationUrls];
-    if (inspirationUrls.length === 0) {
-      toast.info("Finding design inspirations based on your prompt...");
-      const fetchedInspirations = await fetchDesignInspirations(userPrompt, {
-        style: options.designStyle,
-        componentType: options.componentType,
-        colorScheme: options.colorScheme
-      });
-      allInspirations = fetchedInspirations.map(insp => insp.url);
+    // Use the real AI service if API key is configured
+    if (import.meta.env.VITE_OPENAI_API_KEY) {
+      toast.info("Analyzing design inspirations with AI...");
+      
+      // Call the AI service to analyze inspirations
+      const result = await analyzeDesignInspirationsWithAI(prompt, inspirations);
+      
+      return {
+        prompt: result.enhancedPrompt,
+        inspirations,
+        analysis: result.analysis
+      };
+    } else {
+      // Fall back to mock implementation if no API key is configured
+      toast.warning("Using mock implementation (no OpenAI API key configured)");
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Return mock results
+      return {
+        prompt: `Enhanced: ${prompt}`,
+        inspirations,
+        analysis: {
+          colorPalette: ['#3B82F6', '#10B981', '#6366F1', '#F59E0B', '#EF4444'],
+          layoutStructure: 'Standard component layout with balanced proportions',
+          typographySystem: 'Modern sans-serif typography with clear hierarchy',
+          designPatterns: ['Card-based UI', 'Subtle shadows', 'Rounded corners']
+        }
+      };
     }
-    
-    // Step 2: Analyze the design inspirations
-    toast.info("Analyzing design inspirations to extract key elements...");
-    const designAnalysis = await analyzeDesignInspirations(allInspirations);
-    
-    // Step 3: Construct an enhanced prompt
-    const enhancedPrompt = constructEnhancedPrompt(userPrompt, designAnalysis, options);
-    
-    // Step 4: This would call the AI model to generate the component code
-    // In a real implementation, this would be an actual API call to an AI service
-    
-    // Step 5: Return the results
-    return {
-      prompt: enhancedPrompt,
-      inspirations: allInspirations,
-      analysis: designAnalysis,
-      // In a real implementation, this would include the generated component code
-    };
   } catch (error) {
-    console.error("Error in design generation process:", error);
-    toast.error("Failed to generate design from inspirations");
-    throw error;
+    console.error('Error generating design from inspirations:', error);
+    toast.error(`Failed to analyze inspirations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    
+    // Return a fallback result
+    return {
+      prompt,
+      inspirations,
+      analysis: {
+        colorPalette: ['#3B82F6', '#10B981', '#6366F1', '#F59E0B', '#EF4444'],
+        layoutStructure: 'Standard component layout',
+        typographySystem: 'System default typography',
+        designPatterns: ['Basic UI patterns']
+      }
+    };
   }
 };

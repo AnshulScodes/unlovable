@@ -1,5 +1,6 @@
-
 import { ThemeVariables } from '@/hooks/useThemeCustomizer';
+import { generateUniqueComponentWithAI, ComponentGenerationRequest } from './openAIService';
+import { toast } from 'sonner';
 
 // Mock unique design style templates that will inform our generator
 const designStyles = {
@@ -371,97 +372,187 @@ export const generateUniqueComponent = async (
   componentCode: string;
   styleCode: string;
 }> => {
-  // For now this is a mock function that simulates AI processing
   console.log('Generating component with:', { prompt, inspirations, options });
   
-  // Simulate processing time
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
-  // Get the base style from design styles or use default
-  let baseStyle = options.designStyle && designStyles[options.designStyle as keyof typeof designStyles]
-    ? designStyles[options.designStyle as keyof typeof designStyles]
-    : designStyles.neobrutalist;
-  
-  // Generate random base hue for color schemes
-  const baseHue = Math.floor(Math.random() * 360);
-  
-  // Apply color scheme if specified
-  let colorPalette = {};
-  if (options.colorScheme && colorSchemes[options.colorScheme as keyof typeof colorSchemes]) {
-    colorPalette = colorSchemes[options.colorScheme as keyof typeof colorSchemes](baseHue);
+  try {
+    // Use the real AI service if API key is configured
+    if (import.meta.env.VITE_OPENAI_API_KEY) {
+      toast.info("Starting AI-powered component generation...");
+      
+      // Prepare the request for the AI service
+      const request: ComponentGenerationRequest = {
+        prompt,
+        componentType: options.componentType || 'card',
+        designStyle: options.designStyle,
+        colorScheme: options.colorScheme,
+        uniquenessLevel: options.uniquenessLevel || 5,
+        inspirations
+      };
+      
+      // Call the AI service
+      const aiResult = await generateUniqueComponentWithAI(request);
+      
+      // Convert AI result to theme variables
+      const themeVariables = convertAIResultToThemeVariables(aiResult.designAnalysis.colorPalette);
+      
+      return {
+        themeVariables,
+        componentCode: aiResult.componentCode,
+        styleCode: aiResult.styleCode
+      };
+    } else {
+      // Fall back to the mock implementation if no API key is configured
+      toast.warning("Using mock implementation (no OpenAI API key configured)");
+      
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Use the existing mock implementation
+      // Get the base style from design styles or use default
+      let baseStyle = options.designStyle && designStyles[options.designStyle as keyof typeof designStyles]
+        ? designStyles[options.designStyle as keyof typeof designStyles]
+        : designStyles.neobrutalist;
+      
+      // Generate random base hue for color schemes
+      const baseHue = Math.floor(Math.random() * 360);
+      
+      // Apply color scheme if specified
+      let colorPalette = {};
+      if (options.colorScheme && colorSchemes[options.colorScheme as keyof typeof colorSchemes]) {
+        colorPalette = colorSchemes[options.colorScheme as keyof typeof colorSchemes](baseHue);
+      }
+      
+      // Return mock result with default theme variables
+      const defaultThemeVariables: ThemeVariables = {
+        colors: [
+          { name: 'Background', variable: '--background', value: 'hsl(210, 40%, 98%)', hue: 210, saturation: 40, lightness: 98 },
+          { name: 'Foreground', variable: '--foreground', value: 'hsl(222.2, 84%, 4.9%)', hue: 222.2, saturation: 84, lightness: 4.9 },
+          { name: 'Primary', variable: '--primary', value: 'hsl(221.2, 83%, 53.9%)', hue: 221.2, saturation: 83, lightness: 53.9 },
+          { name: 'Primary Foreground', variable: '--primary-foreground', value: 'hsl(210, 40%, 98%)', hue: 210, saturation: 40, lightness: 98 },
+          { name: 'Secondary', variable: '--secondary', value: 'hsl(210, 40%, 96.1%)', hue: 210, saturation: 40, lightness: 96.1 }
+        ],
+        borderRadius: 0.5,
+        fontFamily: "'Inter', sans-serif",
+        fontSize: 16,
+        fontWeight: 400,
+        lineHeight: 1.5,
+        shadowSize: 2
+      };
+      
+      return {
+        themeVariables: defaultThemeVariables,
+        componentCode: "// Mock component code",
+        styleCode: "/* Mock style code */"
+      };
+    }
+  } catch (error) {
+    console.error('Error in generateUniqueComponent:', error);
+    toast.error(`Failed to generate component: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    
+    // Return a fallback result with default theme variables
+    const fallbackThemeVariables: ThemeVariables = {
+      colors: [
+        { name: 'Background', variable: '--background', value: 'hsl(210, 40%, 98%)', hue: 210, saturation: 40, lightness: 98 },
+        { name: 'Foreground', variable: '--foreground', value: 'hsl(222.2, 84%, 4.9%)', hue: 222.2, saturation: 84, lightness: 4.9 },
+        { name: 'Primary', variable: '--primary', value: 'hsl(221.2, 83%, 53.9%)', hue: 221.2, saturation: 83, lightness: 53.9 },
+        { name: 'Primary Foreground', variable: '--primary-foreground', value: 'hsl(210, 40%, 98%)', hue: 210, saturation: 40, lightness: 98 },
+        { name: 'Secondary', variable: '--secondary', value: 'hsl(210, 40%, 96.1%)', hue: 210, saturation: 40, lightness: 96.1 }
+      ],
+      borderRadius: 0.5,
+      fontFamily: "'Inter', sans-serif",
+      fontSize: 16,
+      fontWeight: 400,
+      lineHeight: 1.5,
+      shadowSize: 2
+    };
+    
+    return {
+      themeVariables: fallbackThemeVariables,
+      componentCode: "// Fallback component code",
+      styleCode: "/* Fallback style code */"
+    };
   }
-  
-  // Increase variation based on uniqueness level (1-10)
-  const uniquenessVariation = options.uniquenessLevel / 10;
-  
-  // Apply random variations based on uniqueness level
-  const applyRandomVariation = (value: number, range: number) => {
-    const variation = (Math.random() * 2 - 1) * range * uniquenessVariation;
-    return value + variation;
-  };
-  
-  // Convert design style to theme variables
-  const generatedTheme: ThemeVariables = {
-    colors: [
-      { 
-        name: 'Background', 
-        variable: '--background', 
-        value: `hsl(${Math.floor(Math.random() * 360)}, ${Math.floor(20 + Math.random() * 20)}%, ${Math.floor(90 + Math.random() * 10)}%)`,
-        hue: Math.floor(Math.random() * 360),
-        saturation: Math.floor(20 + Math.random() * 20),
-        lightness: Math.floor(90 + Math.random() * 10) 
-      },
-      { 
-        name: 'Foreground', 
-        variable: '--foreground', 
-        value: `hsl(${Math.floor(Math.random() * 360)}, ${Math.floor(20 + Math.random() * 60)}%, ${Math.floor(10 + Math.random() * 30)}%)`,
-        hue: Math.floor(Math.random() * 360),
-        saturation: Math.floor(20 + Math.random() * 60),
-        lightness: Math.floor(10 + Math.random() * 30)
-      },
-      { 
-        name: 'Primary', 
-        variable: '--primary', 
-        value: `hsl(${baseStyle.colors.primary.hue}, ${baseStyle.colors.primary.saturation}%, ${baseStyle.colors.primary.lightness}%)`,
-        hue: baseStyle.colors.primary.hue,
-        saturation: baseStyle.colors.primary.saturation,
-        lightness: baseStyle.colors.primary.lightness 
-      },
-      // Add more colors as needed...
-    ],
-    borderRadius: baseStyle.borderRadius || 0.5,
-    fontFamily: baseStyle.fontFamily || "'Inter', sans-serif",
-    fontSize: 1,
-    fontWeight: baseStyle.fontWeight || 400,
-    lineHeight: 1.5,
-    shadowSize: baseStyle.shadowSize || 2,
-  };
-  
-  // Get component template based on component type
-  const componentTemplate = componentTemplates[options.componentType as keyof typeof componentTemplates] 
-    || componentTemplates.card;
-  
-  // Generate component JSX with applied styles
-  const componentJSX = componentTemplate.jsx;
-  const componentCSS = componentTemplate.css;
-  
-  // Combine all the generated code
-  const fullComponentCode = `import React from 'react';
-import './YourComponent.css';
-
-const YourComponent = () => {
-  return (
-${componentJSX}
-  );
 };
 
-export default YourComponent;`;
-
+// Helper function to convert AI color palette to theme variables
+const convertAIResultToThemeVariables = (colorPalette: string[]): ThemeVariables => {
+  // Convert hex colors to HSL for theme variables
+  const colors = colorPalette.map((hex, index) => {
+    const rgb = hexToRgb(hex);
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    
+    // Map colors to theme variables
+    const colorMappings = [
+      { name: 'Primary', variable: '--primary' },
+      { name: 'Secondary', variable: '--secondary' },
+      { name: 'Background', variable: '--background' },
+      { name: 'Foreground', variable: '--foreground' },
+      { name: 'Accent', variable: '--accent' }
+    ];
+    
+    const mapping = colorMappings[index % colorMappings.length];
+    
+    return {
+      name: mapping.name,
+      variable: mapping.variable,
+      value: `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`,
+      hue: hsl.h,
+      saturation: hsl.s,
+      lightness: hsl.l
+    };
+  });
+  
+  // Return theme variables
   return {
-    themeVariables: generatedTheme,
-    componentCode: fullComponentCode,
-    styleCode: componentCSS
+    colors,
+    borderRadius: 0.5,
+    fontFamily: "'Inter', sans-serif",
+    fontSize: 16,
+    fontWeight: 400,
+    lineHeight: 1.5,
+    shadowSize: 2
   };
+};
+
+// Helper function to convert hex to RGB
+const hexToRgb = (hex: string) => {
+  // Remove # if present
+  hex = hex.replace(/^#/, '');
+  
+  // Parse hex
+  const bigint = parseInt(hex, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  
+  return { r, g, b };
+};
+
+// Helper function to convert RGB to HSL
+const rgbToHsl = (r: number, g: number, b: number) => {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    
+    h *= 60;
+  }
+  
+  return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
 };
 
 // Function to fetch design inspirations from external sources
