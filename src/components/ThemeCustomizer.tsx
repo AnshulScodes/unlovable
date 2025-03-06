@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
@@ -84,7 +83,7 @@ const ThemeCustomizer: React.FC = () => {
             <TabsContent value="manual" className="space-y-4 animate-fade-in">
               <div>
                 <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-                  <PaintBrush className="h-4 w-4" /> Colors
+                  <Paintbrush className="h-4 w-4" /> Colors
                 </h3>
                 <div className="space-y-1">
                   {themeVariables.colors.map((color, index) => (
