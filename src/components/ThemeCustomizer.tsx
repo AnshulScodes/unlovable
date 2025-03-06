@@ -15,8 +15,17 @@ import { useThemeCustomizer } from '@/hooks/useThemeCustomizer';
 import ThemeCodeDisplay from './ThemeCodeDisplay';
 import DesignSuggestions from './DesignSuggestions';
 import PresetSelector from './PresetSelector';
+import EnhancedDesignInspirationsDisplay from './EnhancedDesignInspirationsDisplay';
 
-const ThemeCustomizer: React.FC = () => {
+interface ThemeCustomizerProps {
+  onGenerateTheme?: (prompt: string, inspirations?: string[], options?: any) => void;
+  isGenerating?: boolean;
+}
+
+const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({ 
+  onGenerateTheme,
+  isGenerating = false
+}) => {
   const {
     themeVariables,
     isDarkMode,
@@ -32,7 +41,7 @@ const ThemeCustomizer: React.FC = () => {
     suggestions,
     applySuggestion,
     themeCode,
-    isGenerating,
+    isGenerating: isThemeGenerating,
     applyPreset,
     selectedPreset,
     presets
@@ -48,6 +57,14 @@ const ThemeCustomizer: React.FC = () => {
     { value: 'Playfair Display, serif', label: 'Playfair Display (Serif)' },
     { value: 'JetBrains Mono, monospace', label: 'JetBrains Mono (Monospace)' },
   ];
+
+  const handleGenerateTheme = (prompt: string, inspirations?: string[], options?: any) => {
+    if (onGenerateTheme) {
+      onGenerateTheme(prompt, inspirations, options);
+    } else {
+      generateFromPrompt(prompt, inspirations, options);
+    }
+  };
 
   return (
     <Card className="glass-card w-full max-h-screen overflow-hidden">
@@ -340,7 +357,10 @@ const ThemeCustomizer: React.FC = () => {
             </TabsContent>
             
             <TabsContent value="ai" className="animate-fade-in">
-              <AIPromptInput onGenerateTheme={generateFromPrompt} isGenerating={isGenerating} />
+              <AIPromptInput 
+                onGenerateTheme={handleGenerateTheme} 
+                isGenerating={isGenerating || isThemeGenerating} 
+              />
             </TabsContent>
             
             <TabsContent value="code" className="animate-fade-in">
