@@ -11,6 +11,14 @@ export interface DesignInspiration {
   source: 'dribbble' | 'behance' | 'figma' | 'other';
 }
 
+// Default analysis to use as fallback
+const defaultAnalysis = {
+  colorPalette: ['#3B82F6', '#10B981', '#6366F1', '#F59E0B', '#EF4444'],
+  layoutStructure: 'Standard component layout with balanced proportions',
+  typographySystem: 'Modern sans-serif typography with clear hierarchy',
+  designPatterns: ['Card-based UI', 'Subtle shadows', 'Rounded corners']
+};
+
 // This would be a real API service in a production application
 export const fetchDesignInspirations = async (
   searchTerm: string,
@@ -20,40 +28,51 @@ export const fetchDesignInspirations = async (
     colorScheme?: string;
   } = {}
 ): Promise<DesignInspiration[]> => {
-  console.log('Searching for design inspirations:', searchTerm, filters);
-  
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
-  // Generate random ID based on search parameters to ensure consistent results for the same search
-  const generateId = (base: string, idx: number) => {
-    const seed = `${searchTerm}-${idx}-${filters.style || ''}-${filters.componentType || ''}`;
-    return `${base}-${seed.split('').reduce((a, b) => a + b.charCodeAt(0), 0) % 1000}`;
-  };
-  
-  // Create mock results that would come from actual APIs in a real implementation
-  const results: DesignInspiration[] = Array(6).fill(null).map((_, idx) => {
-    const id = generateId('insp', idx);
-    const sources = ['dribbble', 'behance', 'figma', 'other'] as const;
-    const source = sources[idx % sources.length];
-    const tags = [
-      searchTerm.split(' ')[0] || 'design', 
-      filters.style || 'modern',
-      filters.componentType || 'ui',
-      idx % 2 === 0 ? 'trending' : 'popular'
-    ];
+  try {
+    console.log('Searching for design inspirations:', searchTerm, filters);
     
-    return {
-      id,
-      title: `${searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1)} Design ${idx + 1}`,
-      url: `https://example.com/design/${id}`,
-      thumbnailUrl: `https://picsum.photos/seed/${id}/400/300`,
-      tags,
-      source
+    // Validate inputs
+    if (!searchTerm || searchTerm.trim() === '') {
+      searchTerm = 'design'; // Default search term
+    }
+    
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Generate random ID based on search parameters to ensure consistent results for the same search
+    const generateId = (base: string, idx: number) => {
+      const seed = `${searchTerm}-${idx}-${filters.style || ''}-${filters.componentType || ''}`;
+      return `${base}-${seed.split('').reduce((a, b) => a + b.charCodeAt(0), 0) % 1000}`;
     };
-  });
-  
-  return results;
+    
+    // Create mock results that would come from actual APIs in a real implementation
+    const results: DesignInspiration[] = Array(6).fill(null).map((_, idx) => {
+      const id = generateId('insp', idx);
+      const sources = ['dribbble', 'behance', 'figma', 'other'] as const;
+      const source = sources[idx % sources.length];
+      const tags = [
+        searchTerm.split(' ')[0] || 'design', 
+        filters.style || 'modern',
+        filters.componentType || 'ui',
+        idx % 2 === 0 ? 'trending' : 'popular'
+      ];
+      
+      return {
+        id,
+        title: `${searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1)} Design ${idx + 1}`,
+        url: `https://example.com/design/${id}`,
+        thumbnailUrl: `https://picsum.photos/seed/${id}/400/300`,
+        tags,
+        source
+      };
+    });
+    
+    return results;
+  } catch (error) {
+    console.error('Error fetching design inspirations:', error);
+    toast.error(`Failed to fetch inspirations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return []; // Return empty array on error
+  }
 };
 
 // This would analyze the images and extract design patterns, color schemes, etc.
@@ -154,21 +173,41 @@ export const generateDesignFromInspirations = async (
     designPatterns: string[];
   }
 }> => {
-  console.log('Generating design from inspirations:', { prompt, inspirations, options });
-  
   try {
+    console.log('Generating design from inspirations:', { prompt, inspirations, options });
+    
+    // Validate inputs
+    if (!prompt || prompt.trim() === '') {
+      prompt = 'Modern UI component'; // Default prompt
+    }
+    
+    // Ensure inspirations is an array
+    if (!Array.isArray(inspirations)) {
+      inspirations = [];
+    }
+    
     // Use the real AI service if API key is configured
-    if (import.meta.env.VITE_OPENAI_API_KEY) {
+    const hasApiKey = import.meta.env.VITE_OPENAI_API_KEY && 
+                      import.meta.env.VITE_OPENAI_API_KEY.trim() !== '' &&
+                      import.meta.env.VITE_OPENAI_API_KEY !== 'your_openai_api_key_here';
+                      
+    if (hasApiKey) {
       toast.info("Analyzing design inspirations with AI...");
       
-      // Call the AI service to analyze inspirations
-      const result = await analyzeDesignInspirationsWithAI(prompt, inspirations);
-      
-      return {
-        prompt: result.enhancedPrompt,
-        inspirations,
-        analysis: result.analysis
-      };
+      try {
+        // Call the AI service to analyze inspirations
+        const result = await analyzeDesignInspirationsWithAI(prompt, inspirations);
+        
+        return {
+          prompt: result.enhancedPrompt,
+          inspirations,
+          analysis: result.analysis
+        };
+      } catch (aiError) {
+        console.error('Error calling AI service:', aiError);
+        toast.error(`AI service error: ${aiError instanceof Error ? aiError.message : 'Unknown error'}`);
+        throw aiError; // Re-throw to be caught by the outer try/catch
+      }
     } else {
       // Fall back to mock implementation if no API key is configured
       toast.warning("Using mock implementation (no OpenAI API key configured)");
@@ -180,12 +219,7 @@ export const generateDesignFromInspirations = async (
       return {
         prompt: `Enhanced: ${prompt}`,
         inspirations,
-        analysis: {
-          colorPalette: ['#3B82F6', '#10B981', '#6366F1', '#F59E0B', '#EF4444'],
-          layoutStructure: 'Standard component layout with balanced proportions',
-          typographySystem: 'Modern sans-serif typography with clear hierarchy',
-          designPatterns: ['Card-based UI', 'Subtle shadows', 'Rounded corners']
-        }
+        analysis: defaultAnalysis
       };
     }
   } catch (error) {
@@ -196,12 +230,7 @@ export const generateDesignFromInspirations = async (
     return {
       prompt,
       inspirations,
-      analysis: {
-        colorPalette: ['#3B82F6', '#10B981', '#6366F1', '#F59E0B', '#EF4444'],
-        layoutStructure: 'Standard component layout',
-        typographySystem: 'System default typography',
-        designPatterns: ['Basic UI patterns']
-      }
+      analysis: defaultAnalysis
     };
   }
 };

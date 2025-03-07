@@ -207,154 +207,21 @@ const colorSchemes = {
   },
 };
 
-// Example component templates
-const componentTemplates = {
-  card: {
-    jsx: `<div className="card-container">
-  <div className="card-header">
-    <h3 className="card-title">Card Title</h3>
-    <p className="card-description">This is a description for the card component.</p>
-  </div>
-  <div className="card-content">
-    <p>Main content goes here. This is where the main information is displayed.</p>
-  </div>
-  <div className="card-footer">
-    <button className="card-button">Action Button</button>
-  </div>
-</div>`,
-    css: `.card-container {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
-  color: var(--card-foreground);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.card-header {
-  padding: 1.5rem 1.5rem 0.75rem;
-}
-
-.card-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.card-description {
-  color: var(--muted-foreground);
-  font-size: 0.875rem;
-}
-
-.card-content {
-  padding: 0.75rem 1.5rem;
-}
-
-.card-footer {
-  padding: 0.75rem 1.5rem 1.5rem;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.card-button {
-  background: var(--primary);
-  color: var(--primary-foreground);
-  border: none;
-  border-radius: var(--radius);
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.card-button:hover {
-  opacity: 0.9;
-}`
-  },
-  header: {
-    jsx: `<header className="site-header">
-  <div className="header-container">
-    <div className="logo-container">
-      <span className="logo">Logo</span>
-    </div>
-    <nav className="navigation">
-      <ul className="nav-list">
-        <li className="nav-item"><a href="#" className="nav-link">Home</a></li>
-        <li className="nav-item"><a href="#" className="nav-link">Features</a></li>
-        <li className="nav-item"><a href="#" className="nav-link">Pricing</a></li>
-        <li className="nav-item"><a href="#" className="nav-link">Contact</a></li>
-      </ul>
-    </nav>
-    <div className="header-actions">
-      <button className="action-button">Sign In</button>
-    </div>
-  </div>
-</header>`,
-    css: `.site-header {
-  background: var(--background);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.header-container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.logo {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--foreground);
-}
-
-.navigation {
-  display: flex;
-}
-
-.nav-list {
-  display: flex;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  gap: 2rem;
-}
-
-.nav-link {
-  color: var(--foreground);
-  text-decoration: none;
-  font-size: 0.875rem;
-  transition: color 0.2s;
-}
-
-.nav-link:hover {
-  color: var(--primary);
-}
-
-.header-actions {
-  display: flex;
-  gap: 1rem;
-}
-
-.action-button {
-  background: var(--primary);
-  color: var(--primary-foreground);
-  border: none;
-  border-radius: var(--radius);
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.action-button:hover {
-  opacity: 0.9;
-}`
-  }
+// Default theme variables to use as fallback
+const defaultThemeVariables: ThemeVariables = {
+  colors: [
+    { name: 'Background', variable: '--background', value: 'hsl(210, 40%, 98%)', hue: 210, saturation: 40, lightness: 98 },
+    { name: 'Foreground', variable: '--foreground', value: 'hsl(222.2, 84%, 4.9%)', hue: 222.2, saturation: 84, lightness: 4.9 },
+    { name: 'Primary', variable: '--primary', value: 'hsl(221.2, 83%, 53.9%)', hue: 221.2, saturation: 83, lightness: 53.9 },
+    { name: 'Primary Foreground', variable: '--primary-foreground', value: 'hsl(210, 40%, 98%)', hue: 210, saturation: 40, lightness: 98 },
+    { name: 'Secondary', variable: '--secondary', value: 'hsl(210, 40%, 96.1%)', hue: 210, saturation: 40, lightness: 96.1 }
+  ],
+  borderRadius: 0.5,
+  fontFamily: "'Inter', sans-serif",
+  fontSize: 16,
+  fontWeight: 400,
+  lineHeight: 1.5,
+  shadowSize: 2
 };
 
 // Function to generate a unique component based on the prompt and options
@@ -375,8 +242,21 @@ export const generateUniqueComponent = async (
   console.log('Generating component with:', { prompt, inspirations, options });
   
   try {
+    // Validate inputs to prevent errors
+    if (!prompt || prompt.trim() === '') {
+      throw new Error('Prompt cannot be empty');
+    }
+    
+    if (!options.componentType || options.componentType.trim() === '') {
+      options.componentType = 'card'; // Default to card if not specified
+    }
+    
     // Use the real AI service if API key is configured
-    if (import.meta.env.VITE_OPENAI_API_KEY) {
+    const hasApiKey = import.meta.env.VITE_OPENAI_API_KEY && 
+                      import.meta.env.VITE_OPENAI_API_KEY.trim() !== '' &&
+                      import.meta.env.VITE_OPENAI_API_KEY !== 'your_openai_api_key_here';
+                      
+    if (hasApiKey) {
       toast.info("Starting AI-powered component generation...");
       
       // Prepare the request for the AI service
@@ -389,17 +269,23 @@ export const generateUniqueComponent = async (
         inspirations
       };
       
-      // Call the AI service
-      const aiResult = await generateUniqueComponentWithAI(request);
-      
-      // Convert AI result to theme variables
-      const themeVariables = convertAIResultToThemeVariables(aiResult.designAnalysis.colorPalette);
-      
-      return {
-        themeVariables,
-        componentCode: aiResult.componentCode,
-        styleCode: aiResult.styleCode
-      };
+      try {
+        // Call the AI service
+        const aiResult = await generateUniqueComponentWithAI(request);
+        
+        // Convert AI result to theme variables
+        const themeVariables = convertAIResultToThemeVariables(aiResult.designAnalysis.colorPalette);
+        
+        return {
+          themeVariables,
+          componentCode: aiResult.componentCode,
+          styleCode: aiResult.styleCode
+        };
+      } catch (aiError) {
+        console.error('Error calling AI service:', aiError);
+        toast.error(`AI service error: ${aiError instanceof Error ? aiError.message : 'Unknown error'}`);
+        throw aiError; // Re-throw to be caught by the outer try/catch
+      }
     } else {
       // Fall back to the mock implementation if no API key is configured
       toast.warning("Using mock implementation (no OpenAI API key configured)");
@@ -407,42 +293,11 @@ export const generateUniqueComponent = async (
       // Simulate processing time
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Use the existing mock implementation
-      // Get the base style from design styles or use default
-      let baseStyle = options.designStyle && designStyles[options.designStyle as keyof typeof designStyles]
-        ? designStyles[options.designStyle as keyof typeof designStyles]
-        : designStyles.neobrutalist;
-      
-      // Generate random base hue for color schemes
-      const baseHue = Math.floor(Math.random() * 360);
-      
-      // Apply color scheme if specified
-      let colorPalette = {};
-      if (options.colorScheme && colorSchemes[options.colorScheme as keyof typeof colorSchemes]) {
-        colorPalette = colorSchemes[options.colorScheme as keyof typeof colorSchemes](baseHue);
-      }
-      
       // Return mock result with default theme variables
-      const defaultThemeVariables: ThemeVariables = {
-        colors: [
-          { name: 'Background', variable: '--background', value: 'hsl(210, 40%, 98%)', hue: 210, saturation: 40, lightness: 98 },
-          { name: 'Foreground', variable: '--foreground', value: 'hsl(222.2, 84%, 4.9%)', hue: 222.2, saturation: 84, lightness: 4.9 },
-          { name: 'Primary', variable: '--primary', value: 'hsl(221.2, 83%, 53.9%)', hue: 221.2, saturation: 83, lightness: 53.9 },
-          { name: 'Primary Foreground', variable: '--primary-foreground', value: 'hsl(210, 40%, 98%)', hue: 210, saturation: 40, lightness: 98 },
-          { name: 'Secondary', variable: '--secondary', value: 'hsl(210, 40%, 96.1%)', hue: 210, saturation: 40, lightness: 96.1 }
-        ],
-        borderRadius: 0.5,
-        fontFamily: "'Inter', sans-serif",
-        fontSize: 16,
-        fontWeight: 400,
-        lineHeight: 1.5,
-        shadowSize: 2
-      };
-      
       return {
         themeVariables: defaultThemeVariables,
-        componentCode: "// Mock component code",
-        styleCode: "/* Mock style code */"
+        componentCode: "// Mock component code\n// This is a placeholder. Add your OpenAI API key to generate real components.",
+        styleCode: "/* Mock style code */\n/* This is a placeholder. Add your OpenAI API key to generate real styles. */"
       };
     }
   } catch (error) {
@@ -450,14 +305,57 @@ export const generateUniqueComponent = async (
     toast.error(`Failed to generate component: ${error instanceof Error ? error.message : 'Unknown error'}`);
     
     // Return a fallback result with default theme variables
-    const fallbackThemeVariables: ThemeVariables = {
-      colors: [
-        { name: 'Background', variable: '--background', value: 'hsl(210, 40%, 98%)', hue: 210, saturation: 40, lightness: 98 },
-        { name: 'Foreground', variable: '--foreground', value: 'hsl(222.2, 84%, 4.9%)', hue: 222.2, saturation: 84, lightness: 4.9 },
-        { name: 'Primary', variable: '--primary', value: 'hsl(221.2, 83%, 53.9%)', hue: 221.2, saturation: 83, lightness: 53.9 },
-        { name: 'Primary Foreground', variable: '--primary-foreground', value: 'hsl(210, 40%, 98%)', hue: 210, saturation: 40, lightness: 98 },
-        { name: 'Secondary', variable: '--secondary', value: 'hsl(210, 40%, 96.1%)', hue: 210, saturation: 40, lightness: 96.1 }
-      ],
+    return {
+      themeVariables: defaultThemeVariables,
+      componentCode: "// Error generating component. Please try again.",
+      styleCode: "/* No styles generated due to an error */"
+    };
+  }
+};
+
+// Helper function to convert AI color palette to theme variables
+const convertAIResultToThemeVariables = (colorPalette: string[]): ThemeVariables => {
+  try {
+    // Ensure we have at least some colors to work with
+    if (!colorPalette || colorPalette.length === 0) {
+      return defaultThemeVariables;
+    }
+    
+    // Convert hex colors to HSL for theme variables
+    const colors = colorPalette.map((hex, index) => {
+      try {
+        const rgb = hexToRgb(hex);
+        const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+        
+        // Map colors to theme variables
+        const colorMappings = [
+          { name: 'Primary', variable: '--primary' },
+          { name: 'Secondary', variable: '--secondary' },
+          { name: 'Background', variable: '--background' },
+          { name: 'Foreground', variable: '--foreground' },
+          { name: 'Accent', variable: '--accent' }
+        ];
+        
+        const mapping = colorMappings[index % colorMappings.length];
+        
+        return {
+          name: mapping.name,
+          variable: mapping.variable,
+          value: `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`,
+          hue: hsl.h,
+          saturation: hsl.s,
+          lightness: hsl.l
+        };
+      } catch (colorError) {
+        console.error('Error processing color:', hex, colorError);
+        // Return a default color if there's an error
+        return defaultThemeVariables.colors[index % defaultThemeVariables.colors.length];
+      }
+    });
+    
+    // Return theme variables
+    return {
+      colors,
       borderRadius: 0.5,
       fontFamily: "'Inter', sans-serif",
       fontSize: 16,
@@ -465,94 +363,66 @@ export const generateUniqueComponent = async (
       lineHeight: 1.5,
       shadowSize: 2
     };
-    
-    return {
-      themeVariables: fallbackThemeVariables,
-      componentCode: "// Fallback component code",
-      styleCode: "/* Fallback style code */"
-    };
+  } catch (error) {
+    console.error('Error converting AI result to theme variables:', error);
+    return defaultThemeVariables;
   }
-};
-
-// Helper function to convert AI color palette to theme variables
-const convertAIResultToThemeVariables = (colorPalette: string[]): ThemeVariables => {
-  // Convert hex colors to HSL for theme variables
-  const colors = colorPalette.map((hex, index) => {
-    const rgb = hexToRgb(hex);
-    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-    
-    // Map colors to theme variables
-    const colorMappings = [
-      { name: 'Primary', variable: '--primary' },
-      { name: 'Secondary', variable: '--secondary' },
-      { name: 'Background', variable: '--background' },
-      { name: 'Foreground', variable: '--foreground' },
-      { name: 'Accent', variable: '--accent' }
-    ];
-    
-    const mapping = colorMappings[index % colorMappings.length];
-    
-    return {
-      name: mapping.name,
-      variable: mapping.variable,
-      value: `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`,
-      hue: hsl.h,
-      saturation: hsl.s,
-      lightness: hsl.l
-    };
-  });
-  
-  // Return theme variables
-  return {
-    colors,
-    borderRadius: 0.5,
-    fontFamily: "'Inter', sans-serif",
-    fontSize: 16,
-    fontWeight: 400,
-    lineHeight: 1.5,
-    shadowSize: 2
-  };
 };
 
 // Helper function to convert hex to RGB
 const hexToRgb = (hex: string) => {
-  // Remove # if present
-  hex = hex.replace(/^#/, '');
-  
-  // Parse hex
-  const bigint = parseInt(hex, 16);
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
-  
-  return { r, g, b };
+  try {
+    // Remove # if present
+    hex = hex.replace(/^#/, '');
+    
+    // Handle shorthand hex (e.g., #FFF)
+    if (hex.length === 3) {
+      hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    
+    // Parse hex
+    const bigint = parseInt(hex, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    
+    return { r, g, b };
+  } catch (error) {
+    console.error('Error parsing hex color:', hex, error);
+    return { r: 59, g: 130, b: 246 }; // Default to a blue color
+  }
 };
 
 // Helper function to convert RGB to HSL
 const rgbToHsl = (r: number, g: number, b: number) => {
-  r /= 255;
-  g /= 255;
-  b /= 255;
-  
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  let h = 0, s = 0;
-  const l = (max + min) / 2;
-  
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  try {
+    r /= 255;
+    g /= 255;
+    b /= 255;
     
-    switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0, s = 0;
+    const l = (max + min) / 2;
+    
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      
+      h *= 60;
     }
     
-    h *= 60;
+    return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
+  } catch (error) {
+    console.error('Error converting RGB to HSL:', { r, g, b }, error);
+    return { h: 210, s: 100, l: 50 }; // Default to a blue color
   }
-  
-  return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
 };
 
 // Function to fetch design inspirations from external sources

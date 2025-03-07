@@ -2,11 +2,17 @@ import OpenAI from 'openai';
 import { OPENAI_CONFIG } from '@/lib/api-config';
 import { toast } from 'sonner';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: OPENAI_CONFIG.apiKey,
-  dangerouslyAllowBrowser: true // Note: In production, you should use a backend proxy
-});
+// Create a function to get the OpenAI client only when needed
+const getOpenAIClient = () => {
+  if (!OPENAI_CONFIG.apiKey) {
+    throw new Error('OpenAI API key is not configured. Please add your API key to the .env file.');
+  }
+  
+  return new OpenAI({
+    apiKey: OPENAI_CONFIG.apiKey,
+    dangerouslyAllowBrowser: true // Note: In production, you should use a backend proxy
+  });
+};
 
 // Interface for component generation request
 export interface ComponentGenerationRequest {
@@ -37,9 +43,8 @@ export const generateUniqueComponentWithAI = async (
   request: ComponentGenerationRequest
 ): Promise<ComponentGenerationResponse> => {
   try {
-    if (!OPENAI_CONFIG.apiKey) {
-      throw new Error('OpenAI API key is not configured');
-    }
+    // Get the OpenAI client
+    const openai = getOpenAIClient();
 
     // Create a detailed prompt for the AI
     const detailedPrompt = createDetailedPrompt(request);
@@ -81,11 +86,27 @@ export const generateUniqueComponentWithAI = async (
       throw new Error('No response from OpenAI');
     }
 
-    return JSON.parse(content) as ComponentGenerationResponse;
+    try {
+      return JSON.parse(content) as ComponentGenerationResponse;
+    } catch (parseError) {
+      console.error('Error parsing OpenAI response:', parseError);
+      throw new Error('Failed to parse OpenAI response. The API returned an invalid JSON format.');
+    }
   } catch (error) {
     console.error('Error generating component with AI:', error);
     toast.error(`Failed to generate component: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    throw error;
+    
+    // Return a fallback response instead of throwing
+    return {
+      componentCode: "// Error generating component. Please check your API key and try again.",
+      styleCode: "/* No styles generated due to an error */",
+      designAnalysis: {
+        colorPalette: ['#3B82F6', '#10B981', '#6366F1', '#F59E0B', '#EF4444'],
+        layoutStructure: 'Standard component layout',
+        typographySystem: 'System default typography',
+        designPatterns: ['Basic UI patterns']
+      }
+    };
   }
 };
 
@@ -133,12 +154,8 @@ export const analyzeDesignInspirations = async (
   }
 }> => {
   try {
-    if (!OPENAI_CONFIG.apiKey) {
-      throw new Error('OpenAI API key is not configured');
-    }
-
-    if (inspirations.length === 0) {
-      // If no inspirations provided, return a basic analysis
+    // If no inspirations provided, return a basic analysis
+    if (!inspirations || inspirations.length === 0) {
       return {
         enhancedPrompt: prompt,
         analysis: {
@@ -149,6 +166,9 @@ export const analyzeDesignInspirations = async (
         }
       };
     }
+
+    // Get the OpenAI client
+    const openai = getOpenAIClient();
 
     // Call OpenAI API to analyze inspirations
     const response = await openai.chat.completions.create({
@@ -185,7 +205,12 @@ export const analyzeDesignInspirations = async (
       throw new Error('No response from OpenAI');
     }
 
-    return JSON.parse(content);
+    try {
+      return JSON.parse(content);
+    } catch (parseError) {
+      console.error('Error parsing OpenAI response:', parseError);
+      throw new Error('Failed to parse OpenAI response. The API returned an invalid JSON format.');
+    }
   } catch (error) {
     console.error('Error analyzing design inspirations:', error);
     toast.error(`Failed to analyze inspirations: ${error instanceof Error ? error.message : 'Unknown error'}`);
